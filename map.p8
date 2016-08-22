@@ -6,14 +6,15 @@ __lua__
 -- math constants
 pi = 3.14159265359
 
+-- game constants
 planets = {}
 center = 64
 orbits = {0, 15, 35, 55}
-min_distance = 7
+min_planet_distance = 7
 
 function _init()
   -- createPlanets
-  for o=1,count(orbits) do
+  for o=1,#orbits do
     local num_planets = o == 1 and 1 or rnd(o) + o * 2
     for p=1,num_planets do create_planet(orbits[o], o) end
   end
@@ -29,16 +30,25 @@ function _draw()
   cls()
 
   -- draw orbits
-  for i=1,count(orbits) do
-    circ(center, center, orbits[i], 5)
+  for orbit in all(orbits) do
+    circ(center, center, orbit, 5)
   end
 
   -- draw planets
+  foreach(planets, draw_planet_connections)
   foreach(planets, draw_planet)
 end
 
 function draw_planet(planet)
-  circ(planet.x, planet.y, 3, 12)
+  -- draw a circle at the planets coords
+  circfill(planet.x, planet.y, 3, 12)
+end
+
+function draw_planet_connections(planet)
+  -- draw a line from the planet to its neighbors
+  for neighbor in all(planet.neighbors) do
+    line(planet.x, planet.y, neighbor.x, neighbor.y, 6)
+  end
 end
 
 -- planet init
@@ -58,16 +68,16 @@ function create_planet(radius, orbit)
     name = generate_planet_name(),
     x = x,
     y = y,
-    orbit = orbit
+    orbit = orbit,
+    neighbors = {}
   }
   add(planets, planet)
 end
 
--- make sure this planet wont be too close to any others
 function validate_planet(x, y)
-  for p=1,count(planets) do
-    local planet = planets[p]
-    if(distance(x, y, planet.x, planet.y) < min_distance) then
+  -- make sure this planet wont be too close to any others
+  for planet in all(planets) do
+    if(distance(x, y, planet.x, planet.y) < min_planet_distance) then
       return false
     end
   end
@@ -78,13 +88,42 @@ function generate_planet_name()
   return 'poop'
 end
 
--- connect with closest neighbor
--- connect with closest lower orbit
 function connect_planet(planet)
-  local neighbor
-  local lower_orbit
-  if planet.orbit == 1 then return end
+  -- connect with closest neighbor
+  -- connect with closest lower orbit
+  -- might be able to save some tokens by putting this in the same
+  -- loop as in 'validate_planet'
+  -- but that would draw worse connections
 
+  -- find neighbors
+  local same_neighbor, lower_neighbor
+  local same_dist, lower_dist = 1000, 1000
+  if planet.orbit == 1 then return end
+  for neighbor in all(planets) do
+    local dist = distance(neighbor.x, neighbor.y, planet.x, planet.y)
+    if dist ~= 0 then -- dont consider yourself your closest neighbor
+      if neighbor.orbit == planet.orbit and dist < same_dist then
+        same_dist = dist
+        same_neighbor = neighbor
+      elseif neighbor.orbit == (planet.orbit - 1) and dist < lower_dist then
+        lower_dist = dist
+        lower_neighbor = neighbor
+      end
+    end
+  end
+
+  -- make connections
+  connect_planets(same_neighbor, planet)
+  connect_planets(planet, same_neighbor)
+
+  connect_planets(lower_neighbor, planet)
+  connect_planets(planet, lower_neighbor)
+end
+
+function connect_planets(planet, neighbor)
+  if(indexOf(planet.neighbors, neighbor) == -1) then
+   add(planet.neighbors, neighbor) 
+  end
 end
 
 -- math functions
@@ -95,6 +134,15 @@ end
 
 function sqr(x)
   return x * x
+end
+
+function indexOf(t, object)
+  for i=1,#t do
+    if object == t[i] then
+      return i
+    end
+  end
+  return -1
 end
 
 
