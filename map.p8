@@ -11,6 +11,7 @@ planets = {}
 center = 64
 orbits = {0, 15, 35, 55}
 min_planet_distance = 7
+origin = nil
 
 function _init()
   -- createPlanets
@@ -18,8 +19,10 @@ function _init()
     local num_planets = o == 1 and 1 or rnd(o) + o * 2
     for p=1,num_planets do create_planet(orbits[o], o) end
   end
+  origin = planets[1]
 
   -- createConnections
+  origin.connected = true
   foreach(planets, connect_planet)
 end
 
@@ -69,6 +72,7 @@ function create_planet(radius, orbit)
     x = x,
     y = y,
     orbit = orbit,
+    connected = false,
     neighbors = {}
   }
   add(planets, planet)
@@ -89,41 +93,29 @@ function generate_planet_name()
 end
 
 function connect_planet(planet)
-  -- connect with closest neighbor
-  -- connect with closest lower orbit
-  -- might be able to save some tokens by putting this in the same
-  -- loop as in 'validate_planet'
-  -- but that would draw worse connections
-
-  -- find neighbors
-  local same_neighbor, lower_neighbor
-  local same_dist, lower_dist = 1000, 1000
-  if planet.orbit == 1 then return end
+  -- recursively connect all planets with the origin planet
+  --
+  -- just keep connecting planets with their neighbors until
+  -- you reach a planet that is already connected
+  -- note that the origin planet starts out 'connected'
+  if planet.connected then return true end
+  local closest_neighbor
+  local closest_dist = 1000
   for neighbor in all(planets) do
-    local dist = distance(neighbor.x, neighbor.y, planet.x, planet.y)
-    if dist ~= 0 then -- dont consider yourself your closest neighbor
-      if neighbor.orbit == planet.orbit and dist < same_dist then
-        same_dist = dist
-        same_neighbor = neighbor
-      elseif neighbor.orbit == (planet.orbit - 1) and dist < lower_dist then
-        lower_dist = dist
-        lower_neighbor = neighbor
-      end
-    end
+   local dist = distance(neighbor.x, neighbor.y, planet.x, planet.y)
+    -- dont connect planet with itself, or any neighbor connected to
+   if dist ~= 0 and indexOf(planet.neighbors, neighbor) == -1 then
+     if dist < closest_dist then
+       closest_dist = dist
+       closest_neighbor = neighbor
+     end
+   end
   end
 
-  -- make connections
-  connect_planets(same_neighbor, planet)
-  connect_planets(planet, same_neighbor)
-
-  connect_planets(lower_neighbor, planet)
-  connect_planets(planet, lower_neighbor)
-end
-
-function connect_planets(planet, neighbor)
-  if(indexOf(planet.neighbors, neighbor) == -1) then
-   add(planet.neighbors, neighbor) 
-  end
+ add(planet.neighbors, closest_neighbor) 
+ add(closest_neighbor.neighbors, planet) 
+ 
+ planet.connected = connect_planet(closest_neighbor)
 end
 
 -- math functions
