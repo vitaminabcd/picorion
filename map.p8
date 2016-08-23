@@ -3,7 +3,7 @@ version 4
 __lua__
 -- map screen
 
--- math constants
+-- utility constants
 pi = 3.14159265359
 
 -- game constants
@@ -13,10 +13,15 @@ orbits = {0, 15, 35, 55}
 min_planet_distance = 7
 origin = nil
 
+-- mapscreen globals
+selected = nil
+current = nil
+
 function _init()
   -- createPlanets
   for o=1,#orbits do
-    local num_planets = o == 1 and 1 or rnd(o) + o * 2
+    local extra_planets = o == 4 and 1 or o -- want fewer planets on the outside
+    local num_planets = o == 1 and 1 or rnd(o) + extra_planets
     for p=1,num_planets do create_planet(orbits[o], o) end
   end
   origin = planets[1]
@@ -24,39 +29,21 @@ function _init()
   -- createConnections
   origin.connected = true
   foreach(planets, connect_planet)
-end
 
-function _update()
-end
+  origin.current = true
 
-function _draw()
-  cls()
-
-  -- draw orbits
-  for orbit in all(orbits) do
-    circ(center, center, orbit, 5)
-  end
-
-  -- draw planets
-  foreach(planets, draw_planet_connections)
-  foreach(planets, draw_planet)
-end
-
-function draw_planet(planet)
-  -- draw a circle at the planets coords
-  circfill(planet.x, planet.y, 3, 12)
-end
-
-function draw_planet_connections(planet)
-  -- draw a line from the planet to its neighbors
-  for neighbor in all(planet.neighbors) do
-    line(planet.x, planet.y, neighbor.x, neighbor.y, 6)
+  -- this would normally go in the map screens init
+  for planet in all(planets) do
+    if planet.current then
+      selected = planet
+      current = planet
+      break
+    end
   end
 end
-
--- planet init
 
 function create_planet(radius, orbit)
+  -- planet init
   local valid = false
   local x, y
   while(valid == false) do 
@@ -81,9 +68,7 @@ end
 function validate_planet(x, y)
   -- make sure this planet wont be too close to any others
   for planet in all(planets) do
-    if(distance(x, y, planet.x, planet.y) < min_planet_distance) then
-      return false
-    end
+    if(distance(x, y, planet.x, planet.y) < min_planet_distance) return false 
   end
   return true
 end
@@ -98,13 +83,15 @@ function connect_planet(planet)
   -- just keep connecting planets with their neighbors until
   -- you reach a planet that is already connected
   -- note that the origin planet starts out 'connected'
-  if planet.connected then return true end
+  if (planet.connected) return true
   local closest_neighbor
   local closest_dist = 1000
   for neighbor in all(planets) do
    local dist = distance(neighbor.x, neighbor.y, planet.x, planet.y)
     -- dont connect planet with itself, or any neighbor connected to
-   if dist ~= 0 and indexOf(planet.neighbors, neighbor) == -1 then
+   if dist ~= 0
+   and indexOf(planet.neighbors, neighbor) == -1
+   and (planet.orbit - neighbor.orbit < 2) then
      if dist < closest_dist then
        closest_dist = dist
        closest_neighbor = neighbor
@@ -118,7 +105,85 @@ function connect_planet(planet)
  planet.connected = connect_planet(closest_neighbor)
 end
 
--- math functions
+function move_selection(dir)
+  local candidate_selection
+  local candidate_coord
+  local candidate_dist
+  local axis = (dir == 0 or dir == 1) and 'x' or 'y'
+  local selectable = copy_table(current.neighbors)
+  add(selectable, current)
+  for neighbor in all(selectable) do
+    local coord = neighbor[axis]
+    if (not candidate_coord) candidate_coord = coord
+    local candidate = false
+    if dir == 0 or dir == 2 then
+      candidate = (coord < selected[axis])
+    elseif dir == 1 or dir == 3 then
+      candidate = (coord > selected[axis])
+    end
+    if candidate and distance(selected, neighbor) <= candidate_dist then
+      candidate_coord = coord
+      candidate_selection = neighbor
+    end
+  end
+  if (candidate_selection) selected = candidate_selection
+end
+
+function _update()
+  -- left
+  if btnp(0) then
+   move_selection(0)
+  end
+
+  -- right
+  if btnp(1) then
+   move_selection(1)
+  end
+
+  -- up
+  if btnp(2) then
+   move_selection(2)
+  end
+
+  -- down
+  if btnp(3) then
+   move_selection(3)
+  end
+end
+
+function _draw()
+  cls()
+
+  -- draw orbits
+  --for orbit in all(orbits) do
+  --  circ(center, center, orbit, 5)
+  --end
+
+  -- draw planet connections
+  foreach(planets, draw_planet_connections)
+
+  -- draw selection box
+  rectfill(selected.x - 3, selected.y - 3, selected.x + 3, selected.y + 3, 11) 
+
+  -- draw planets
+  foreach(planets, draw_planet)
+end
+
+function draw_planet(planet)
+  -- draw a circle at the planets coords
+  local color = planet.current and 12 or 13 
+  circfill(planet.x, planet.y, 3, color)
+  circfill(planet.x, planet.y, 2, 0)
+end
+
+function draw_planet_connections(planet)
+  -- draw a line from the planet to its neighbors
+  for neighbor in all(planet.neighbors) do
+    line(planet.x, planet.y, neighbor.x, neighbor.y, 6)
+  end
+end
+
+-- utility functions
 
 function distance(x1, y1, x2, y2)
   return sqrt(sqr(x1 - x2) + sqr(y1 - y2))
@@ -137,5 +202,12 @@ function indexOf(t, object)
   return -1
 end
 
+function copy_table(orig)
+  local copy = {}
+  for orig_key, orig_value in pairs(orig) do
+    copy[orig_key] = orig_value
+  end
+  return copy
+end
 
 __gfx__
