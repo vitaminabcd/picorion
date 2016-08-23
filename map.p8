@@ -106,24 +106,27 @@ function connect_planet(planet)
 end
 
 function move_selection(dir)
+  -- move the selection around the map. seems huge.
+  -- find the nearest planet in the correct direction
+  -- among the list of the current planets neighbors
+  -- (including the current planet)
   local candidate_selection
-  local candidate_coord
-  local candidate_dist
+  local candidate_dist = 1000
   local axis = (dir == 0 or dir == 1) and 'x' or 'y'
   local selectable = copy_table(current.neighbors)
   add(selectable, current)
-  for neighbor in all(selectable) do
-    local coord = neighbor[axis]
-    if (not candidate_coord) candidate_coord = coord
+  for planet in all(selectable) do
     local candidate = false
-    if dir == 0 or dir == 2 then
-      candidate = (coord < selected[axis])
-    elseif dir == 1 or dir == 3 then
-      candidate = (coord > selected[axis])
+    if (dir == 0 or dir == 2) then
+      candidate = (planet[axis] < selected[axis])
+    else
+      candidate = (planet[axis] > selected[axis])
     end
-    if candidate and distance(selected, neighbor) <= candidate_dist then
-      candidate_coord = coord
-      candidate_selection = neighbor
+
+    local dist = v_distance(selected, planet)
+    if candidate and (dist <= candidate_dist) then
+      candidate_dist = dist
+      candidate_selection = planet
     end
   end
   if (candidate_selection) selected = candidate_selection
@@ -187,6 +190,10 @@ end
 
 function distance(x1, y1, x2, y2)
   return sqrt(sqr(x1 - x2) + sqr(y1 - y2))
+end
+
+function v_distance(t1, t2)
+  return sqrt(sqr(t1.x - t2.x) + sqr(t1.y - t2.y))
 end
 
 function sqr(x)
