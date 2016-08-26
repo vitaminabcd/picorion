@@ -72,7 +72,13 @@ end
 
 function _draw()
   cls()
+  draw_planet()
   player:draw()
+end
+
+function draw_planet()
+  local planet_diameter = 50
+  circfill(0, 0, planet_diameter, 12) 
 end
 
 
