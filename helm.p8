@@ -21,6 +21,8 @@ function heavenly_body.new()
   body.angle = 0
   body.sprite = 0
   body.size = 0
+  body.accelerator = true
+  body.acceleration = 0.2
   return body
 end
 
@@ -44,6 +46,23 @@ function heavenly_body:draw()
   end
 end
 
+function heavenly_body:update()
+  local r=flr(self.angle*20)/20
+  -- reduce velocity
+  self.xvel *= 0.95
+  self.yvel *= 0.95
+  -- current speed
+  local speed = sqrt(self.xvel^2 + self.yvel^2) 
+  if self.accelerator then
+    self.xvel += sin(r) * self.acceleration
+    self.yvel -= cos(r) * self.acceleration
+  end
+
+  self.x = flr(self.x + self.xvel)
+  self.y = flr(self.y + self.yvel)
+  printh('angle: '..self.angle..' rotate: '..r..' x: '..self.x..' y: '..self.y)
+end
+
 function spritesheet_coords(sprite_num)
   -- sprite 1 is x8, 15 is 120, 16 is 0, etc
   local x = flr(sprite_num % 16) * 8
@@ -60,14 +79,22 @@ end
 
 function _update()
   camera(player.x - cam_offset, player.y - cam_offset)
+
   if btn(0) then
     player.angle += turn_speed
     if (player.angle < 0) player.angle += 1
   end
   if btn(1) then
     player.angle -= turn_speed
-    if (player.angle > 1) player.angle -= 1
+    if (player.angle >= 1) player.angle -= 1
   end
+  if btn(2) then
+    player.accelerator = true
+  else
+    player.accelerator = false
+  end
+
+  player:update()
 end
 
 function _draw()
@@ -80,6 +107,7 @@ function draw_planet()
   local planet_diameter = 50
   circfill(0, 0, planet_diameter, 12) 
 end
+
 
 
 __gfx__
