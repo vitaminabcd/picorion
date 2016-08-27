@@ -47,7 +47,7 @@ function create_planet(radius, orbit)
   local valid = false
   local x, y
   while(valid == false) do 
-    local angle = rnd(pi*2);
+    local angle = rnd();
     x = cos(angle) * radius + center
     y = sin(angle) * radius + center
     valid = validate_planet(x, y)

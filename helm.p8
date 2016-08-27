@@ -6,7 +6,8 @@ __lua__
 -- constants
 cam_offset = 64
 player = {}
-tau = 6.28318530718
+heavenly_bodies = {}
+sparkles = {}
 
 -- CLASSES
 -- Heavenly Body: a thing in space with a spriteand an angle
@@ -70,9 +71,12 @@ function spaceship:update()
   self.rot_vel *= self.rot_drag
   -- current speed
   local speed = sqrt(self.xvel^2 + self.yvel^2) 
-  if self.accelerator and speed < self.max_speed then
-    self.xvel += sin(r) * self.acceleration
-    self.yvel -= cos(r) * self.acceleration
+  if self.accelerator then
+    self:create_exhaust()
+    if speed < self.max_speed then
+      self.xvel += sin(r) * self.acceleration
+      self.yvel -= cos(r) * self.acceleration
+    end
   end
 
   self.x = flr(self.x + self.xvel)
@@ -92,6 +96,18 @@ function spaceship:update()
   if (self.angle >= 1) self.angle -= 1
 end
 
+function spaceship:create_exhaust()
+  local rand = (rnd() - 0.5) / 10
+  local back = self.angle + rand - 0.25
+  local width = ((self.size / 2) * 8) - 4 
+  add(sparkles, {
+    x = cos(back) * width + self.x,
+    y = sin(back) * width + self.y,
+    clr = select({7,8,10}),
+    time = 5
+  })
+end
+
 function spritesheet_coords(sprite_num)
   -- sprite 1 is x8, 15 is 120, 16 is 0, etc
   local x = flr(sprite_num % 16) * 8
@@ -100,8 +116,43 @@ function spritesheet_coords(sprite_num)
   return x, y
 end
 
+-- planet stuff
+function draw_planet()
+  local planet_diameter = 50
+  circfill(0, 0, planet_diameter, 12) 
+end
+
+-- exhaust sparkles
+function update_sparkle(sparkle)
+  if sparkle.time < 1 then
+    return del(sparkles, sparkle)
+  end
+
+  sparkle.time -= 1
+end
+
+function draw_sparkle(sparkle)
+  circfill(sparkle.x, sparkle.y, sparkle.time, sparkle.clr)
+end
+
+
+-- helpers
+function select(t)
+  return t[flr(rnd(#t))+1]
+end
+
+-- main pico game loop
 function _init()
   player = spaceship.new({sprite = 1, size = 2})
+  gate = heavenly_body.new({
+    sprite = 4,
+    size = 4,
+    angle = 0.75,
+    x = 100,
+    y = 100
+  })
+  add(heavenly_bodies, player)
+  add(heavenly_bodies, gate)
 end
 
 function _update()
@@ -112,17 +163,16 @@ function _update()
   player.accelerator = btn(2)
 
   player:update()
+  foreach(sparkles, update_sparkle)
 end
 
 function _draw()
   cls()
   draw_planet()
-  player:draw()
-end
-
-function draw_planet()
-  local planet_diameter = 50
-  circfill(0, 0, planet_diameter, 12) 
+  foreach(sparkles, draw_sparkle)
+  for hb in all(heavenly_bodies) do
+    hb:draw()
+  end
 end
 
 
