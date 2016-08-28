@@ -4,10 +4,26 @@ __lua__
 -- flyin around
 
 -- constants
-cam_offset = 64
 player = {}
 heavenly_bodies = {}
 sparkles = {}
+stars = {}
+
+-- camera stuff
+cam = {
+  offset = 64
+}
+
+function cam:get()
+  return self.x, self.y
+end
+
+function cam:set(x, y)
+   self.x = x
+   self.y = y
+   camera(x,y)
+end
+
 
 -- classes
 -- heavenly body: a thing in space with a spriteand an angle
@@ -110,7 +126,7 @@ end
 
 function spritesheet_coords(sprite_num)
   -- sprite 1 is x8, 15 is 120, 16 is 0, etc
-  local x = flr(sprite_num % 16) * 8
+  local x = sprite_num % 16 * 8
   -- sprite 16 is y8, 32 is 16, 40 is 24, etc
   local y = flr(sprite_num / 16) * 8
   return x, y
@@ -120,6 +136,25 @@ end
 function draw_planet()
   local planet_diameter = 50
   circfill(0, 0, planet_diameter, 12) 
+end
+
+-- star stuff
+function create_stars()
+  local counter = 0
+  for y=0,127 do
+  for x=0,127 do
+    counter += 1
+    if counter % 7 == 0 and rnd() > 0.9 then
+      local clr = rnd() > 0.5 and 6 or select({1,6,7,12})
+      add(stars, {x=x, y=y, clr=clr})
+    end
+  end
+  end
+end
+
+function draw_star(star)
+  local cam_x, cam_y = cam:get()
+  pset(star.x + cam_x, star.y + cam_y, star.clr)
 end
 
 -- exhaust sparkles
@@ -144,6 +179,7 @@ end
 
 -- main pico game loop
 function _init()
+  create_stars()
   player = spaceship.new({sprite = 0, size = 2})
   gate = heavenly_body.new({
     sprite = 4,
@@ -157,7 +193,7 @@ function _init()
 end
 
 function _update()
-  camera(player.x - cam_offset, player.y - cam_offset)
+  cam:set(player.x - cam.offset, player.y - cam.offset)
 
   player.steering_left = btn(0)
   player.steering_right = btn(1)
@@ -169,6 +205,7 @@ end
 
 function _draw()
   cls()
+  foreach(stars, draw_star)
   draw_planet()
   foreach(sparkles, draw_sparkle)
   for hb in all(heavenly_bodies) do
