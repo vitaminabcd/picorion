@@ -68,7 +68,7 @@ end
 function validate_planet(x, y)
   -- make sure this planet wont be too close to any others
   for planet in all(planets) do
-    if(distance(x, y, planet.x, planet.y) < min_planet_distance) return false 
+    if(v_distance({x=x, y=y}, planet) < min_planet_distance) return false 
   end
   return true
 end
@@ -87,7 +87,7 @@ function connect_planet(planet)
   local closest_neighbor
   local closest_dist = 1000
   for neighbor in all(planets) do
-   local dist = distance(neighbor.x, neighbor.y, planet.x, planet.y)
+   local dist = v_distance(neighbor, planet)
     -- dont connect planet with itself, or any neighbor connected to
    if dist ~= 0
    and indexOf(planet.neighbors, neighbor) == -1

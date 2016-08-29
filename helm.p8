@@ -3,11 +3,12 @@ version 8
 __lua__
 -- flyin around
 
--- constants
+-- helm globals
 player = {}
 heavenly_bodies = {}
 sparkles = {}
 stars = {}
+radar_radius = 25
 
 -- camera stuff
 cam = {
@@ -115,10 +116,11 @@ end
 function spaceship:create_exhaust()
   local rand = (rnd() - 0.5) / 10
   local back = self.angle + rand - 0.25
-  local width = ((self.size / 2) * 8) - 4 
+  local radius = ((self.size / 2) * 8) - 4 
+  local x, y = point_on_circle(self.x, self.y, back, radius)
   add(sparkles, {
-    x = cos(back) * width + self.x,
-    y = sin(back) * width + self.y,
+    x = x,
+    y = y,
     clr = select({7,8,10}),
     time = 5
   })
@@ -170,11 +172,30 @@ function draw_sparkle(sparkle)
   circfill(sparkle.x, sparkle.y, sparkle.time, sparkle.clr)
 end
 
+-- radar
+function draw_radar()
+  -- the planet is always 0,0
+  draw_radar_blip({x=0, y=0, radar_clr=11})
+  foreach(heavenly_bodies, draw_radar_blip)
+end
+
+function draw_radar_blip(body)
+  local angle = atan2(body.x - player.x, body.y - player.y)
+  local x, y = point_on_circle(player.x, player.y, angle, radar_radius)
+  circ(x, y, 1, body.radar_clr)
+end
+
 
 -- helpers
 function select(t)
   -- gimme a random entry from the table
   return t[flr(rnd(#t))+1]
+end
+
+-- mathy_stuff
+function point_on_circle(x, y, angle, radius)
+  -- find the point on the circle at (x,y) of given radius
+  return cos(angle) * radius + x, sin(angle) * radius + y
 end
 
 -- main pico game loop
@@ -185,10 +206,10 @@ function _init()
     sprite = 4,
     size = 4,
     angle = 0.75,
+    radar_clr = 13,
     x = 100,
     y = 100
   })
-  add(heavenly_bodies, player)
   add(heavenly_bodies, gate)
 end
 
@@ -208,9 +229,11 @@ function _draw()
   foreach(stars, draw_star)
   draw_planet()
   foreach(sparkles, draw_sparkle)
+  player:draw()
   for hb in all(heavenly_bodies) do
     hb:draw()
   end
+  draw_radar()
 end
 
 
