@@ -3,34 +3,69 @@ version 8
 __lua__
 -- chatting up some aliens
 
-cat_head = 128
-ant_head = 160
 brotank = 192
 hoody = 224
 
-
-catPerson = {
-  type = 'cat',
-  head = cat_head,
-  body = brotank,
-  clr = 7,
-  eyes = 12,
-  clothes = 12
+person_options = {
+  {
+    type = 'cat',
+    head = 128,
+    clrs = {5, 7, 9},
+    eyes = {10, 12}
+  },
+  {
+    type = 'ant',
+    head = 160,
+    clrs = {5, 8},
+    eyes = {7, 10, 12}
+  }
+}
+clothes_options = {
+  { -- brotank
+    sprite = 192,
+    clrs = {1, 6, 7, 12}
+  },
+  { -- hoody
+    sprite = 224,
+    clrs = {2, 5, 13}
+  }
 }
 
-antPerson = {
-  type = 'ant',
-  head = ant_head,
-  body = hoody,
-  clr = 8,
-  eyes = 12,
-  clothes = 5
-}
+peeps = {}
+
+
+function _init()
+
+  for i=1,4 do
+    add(peeps, create_person())
+  end
+
+end
+
+function create_person()
+  local options = select(person_options)
+  local clothes = select(clothes_options)
+  local clr = select(options.clrs) 
+  local clothes_clr = clr
+  while clothes_clr == clr do
+    clothes_clr = select(clothes.clrs)
+  end
+  return {
+    type = options.type,
+    head = options.head,
+    body = clothes.sprite,
+    clr = clr,
+    eyes = select(options.eyes),
+    clothes = clothes_clr
+  }
+end
 
 function _draw()
   cls()
-  drawPerson(0, 0, catPerson)
-  drawPerson(0, 64, antPerson)
+  drawPerson(0, 0, peeps[1])
+  drawPerson(0, 68, peeps[2])
+  drawPerson(64, 0, peeps[3])
+  drawPerson(64, 68, peeps[4])
 end
 
 function drawPerson(x, y, person)
@@ -44,6 +79,7 @@ function drawPerson(x, y, person)
   zspr(person.head, 2, 2, x, y, zoom)
   pal()
 end
+
 
 function zspr(n,w,h,dx,dy,dz)
   local sw = 8 * w --sprite width
@@ -63,6 +99,11 @@ function zspr(n,w,h,dx,dy,dz)
   -- sspr(sx,sy,sw,sh, dx,dy,dw,dh)
 end
 
+ -- helpers
+function select(t)
+  -- gimme a random entry from the table
+  return t[flr(rnd(#t))+1]
+end
 
 __gfx__
 00000000000000000000000000800000000880000080000000088000008000000008800000500000000550000050000000055000000000000000000000000000
