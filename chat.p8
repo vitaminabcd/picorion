@@ -37,12 +37,6 @@ clothes_options = {
   }
 }
 
-chat_options = {
-  {txt = 'joke', func = joke_result },
-  {txt = 'talk to me', func = talk_result },
-  {txt = '...', func = talk_result }
-}
-
 peep = {}
 
 function _init()
@@ -77,12 +71,56 @@ function _update()
     frame_counter = 0
     advance_frame()
   end
+
+  do_buttons()
 end
 
 function advance_frame()
   peep.current_frame += 1
   if peep.current_frame > #peep.current_animation then
     peep.current_frame = 1
+  end
+end
+
+function joke_result()
+  switch_animation('laughing')
+end
+
+function talk_result()
+  switch_animation('talking')
+end
+
+function idle_result()
+  switch_animation('idle')
+end
+
+function switch_animation(animation)
+  peep.current_animation = peep.animations[animation]
+  peep.current_frame = 1
+end
+
+chat_options = {
+  {txt = 'joke', func = joke_result},
+  {txt = 'talk to me', func = talk_result },
+  {txt = '...', func = idle_result }
+}
+selected_index = 1
+
+function do_buttons()
+  -- move chat selection
+  local old_selection = selected_index
+  if (btnp(0)) selected_index -= 2
+  if (btnp(1)) selected_index += 2
+  if (btnp(2)) selected_index -= 1
+  if (btnp(3)) selected_index += 1
+  if not chat_options[selected_index] then
+    selected_index = old_selection
+  end
+
+  --select
+  if btnp(4) then
+    chat_options[selected_index].func()
+    selected_index = 1
   end
 end
 
@@ -106,20 +144,18 @@ function draw_person(x, y, person)
 end
 
 function draw_chat_box()
-  rect(0, 94, 127, 127) 
-  rect(2, 96, 125, 125) 
+  rect(0, 94, 127, 127, 6) 
+  rect(2, 96, 125, 125, 6) 
 end
 
 function draw_chat_options()
   for i=1,#chat_options do
-    local x = (i > 2) and 64 or 12
-    local y = (i % 2 > 0) and 102 or 114
-    print(chat_options[i].txt, x, y) 
+    local option = chat_options[i] 
+    local x = i > 2 and 64 or 12
+    local y = i % 2 > 0 and 102 or 114
+    local clr = selected_index == i and 11 or 6
+    print(option.txt, x, y, clr) 
   end
-end
-
-function joke_result()
-  peep.current_animation = peep.animations.laughing
 end
 
 function zspr(n,w,h,dx,dy,dz)
