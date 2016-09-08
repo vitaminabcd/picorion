@@ -37,16 +37,13 @@ clothes_options = {
   }
 }
 
-chat_options = {
-  {txt = 'joke', func = joke_result },
-  {txt = 'talk to me', func = talk_result },
-  {txt = '...', func = talk_result }
-}
+peeps = {}
 
-peep = {}
 
 function _init()
-  peep = create_person()
+  for i=1,4 do
+    add(peeps, create_person())
+  end
 end
 
 function create_person()
@@ -80,20 +77,23 @@ function _update()
 end
 
 function advance_frame()
-  peep.current_frame += 1
-  if peep.current_frame > #peep.current_animation then
-    peep.current_frame = 1
+  for peep in all(peeps) do
+    peep.current_frame += 1
+    if peep.current_frame > #peep.current_animation then
+      peep.current_frame = 1
+    end
   end
 end
 
 function _draw()
   cls()
-  draw_person(36, 24, peep)
-  draw_chat_box()
-  draw_chat_options()
+  drawperson(0, 0, peeps[1])
+  drawperson(0, 68, peeps[2])
+  drawperson(64, 0, peeps[3])
+  drawperson(64, 68, peeps[4])
 end
 
-function draw_person(x, y, person)
+function drawperson(x, y, person)
   local zoom = 3
 
   pal(2, person.clr)
@@ -105,22 +105,6 @@ function draw_person(x, y, person)
   pal()
 end
 
-function draw_chat_box()
-  rect(0, 94, 127, 127) 
-  rect(2, 96, 125, 125) 
-end
-
-function draw_chat_options()
-  for i=1,#chat_options do
-    local x = (i > 2) and 64 or 12
-    local y = (i % 2 > 0) and 102 or 114
-    print(chat_options[i].txt, x, y) 
-  end
-end
-
-function joke_result()
-  peep.current_animation = peep.animations.laughing
-end
 
 function zspr(n,w,h,dx,dy,dz)
   -- zoom sprite
