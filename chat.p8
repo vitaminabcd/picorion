@@ -38,7 +38,9 @@ clothes_options = {
 }
 
 peep = {}
-current_chat_text = ''
+empty_chat_text = {''}
+current_chat_text = empty_chat_text
+current_chat_index = 1
 
 function _init()
   peep = create_person()
@@ -74,6 +76,7 @@ function _update()
   end
 
   do_buttons()
+  update_chat_options()
 end
 
 function advance_frame()
@@ -83,19 +86,31 @@ function advance_frame()
   end
 end
 
+-- chat stuff
+
+function update_chat_options()
+  if current_chat_text != empty_chat_text then
+    if current_chat_index < #current_chat_text then
+      chat_options = more_option
+    else
+      chat_options = done_option
+    end
+  end
+end
+
 function joke_result()
   switch_animation('laughing')
-  current_chat_text = 'hahaha!'
+  current_chat_text = {'hahaha!'}
 end
 
 function talk_result()
   switch_animation('talking')
-  current_chat_text = 'blah blah blah blah'
+  current_chat_text = {'hello my name is buttfart.', 'how are you today?'}
 end
 
 function idle_result()
   switch_animation('idle')
-  current_chat_text = ''
+  current_chat_text = {''}
 end
 
 function switch_animation(animation)
@@ -103,12 +118,29 @@ function switch_animation(animation)
   peep.current_frame = 1
 end
 
-chat_options = {
+function more_chat()
+  current_chat_index += 1
+end
+
+function done_chat()
+  current_chat_text = empty_chat_text
+  current_chat_index = 1
+  chat_options = default_options
+  switch_animation('idle')
+end
+
+default_options = {
   {txt = 'joke', func = joke_result},
   {txt = 'talk to me', func = talk_result },
   {txt = '...', func = idle_result }
 }
+more_option = {{txt = 'more', func = more_chat }}
+done_option = {{txt = 'cool', func = done_chat }}
+chat_options = default_options
 selected_index = 1
+
+
+-- input
 
 function do_buttons()
   -- move chat selection
@@ -164,9 +196,10 @@ function draw_chat_options()
 end
 
 function draw_chat_text()
-  if current_chat_text != '' then
+  local txt = current_chat_text[current_chat_index] 
+  if txt != '' then
     zspr(64, 5, 1, 4, 4, 3)
-    print_centered(current_chat_text, 64, 11, 5)
+    print_centered(txt, 64, 11, 5)
   end
 end
 
