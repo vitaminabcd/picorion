@@ -153,7 +153,7 @@ function do_buttons()
     selected_index = old_selection
   end
 
-  --select
+  -- select
   if btnp(4) then
     chat_options[selected_index].func()
     selected_index = 1
