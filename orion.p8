@@ -11,6 +11,7 @@ draw_funcs = {}
 function _init()
   --global game init
   create_stars()
+  create_planets()
 
   -- start out on helm screen
   init_helm()
@@ -21,6 +22,7 @@ function _update()
 end
 
 function _draw()
+  cls()
   for f in all(draw_funcs) do f() end
 end
 
@@ -40,6 +42,106 @@ function cam:set(x, y)
 end
 
 
+-- GAME INIT STUFF
+
+stars = {}
+planets = {}
+center = 64
+orbits = {0, 15, 35, 55}
+min_planet_distance = 7
+origin = nil
+
+function create_stars()
+  local counter = 0
+  for y=0,127 do
+  for x=0,127 do
+    counter += 1
+    if counter % 7 == 0 and rnd() > 0.9 then
+      local clr = rnd() > 0.5 and 6 or select({1,6,7,12})
+      add(stars, {x=x, y=y, clr=clr})
+    end
+  end
+  end
+end
+
+function create_planets()
+  for o=1,#orbits do
+    local extra_planets = o == 4 and 1 or o -- want fewer planets on the outside
+    local num_planets = o == 1 and 1 or rnd(o) + extra_planets
+    for p=1,num_planets do create_planet(orbits[o], o) end
+  end
+  origin = planets[1]
+
+  -- createConnections
+  origin.connected = true
+  foreach(planets, connect_planet)
+
+  origin.current = true
+end
+
+function create_planet(radius, orbit)
+  -- planet init
+  local valid = false
+  local x, y
+  while(valid == false) do 
+    local angle = rnd();
+    x = cos(angle) * radius + center
+    y = sin(angle) * radius + center
+    valid = validate_planet(x, y)
+  end
+
+  local planet = {
+    discovered = false,
+    name = generate_planet_name(),
+    x = x,
+    y = y,
+    orbit = orbit,
+    connected = false,
+    neighbors = {}
+  }
+  add(planets, planet)
+end
+
+function validate_planet(x, y)
+  -- make sure this planet wont be too close to any others
+  for planet in all(planets) do
+    if(v_distance({x=x, y=y}, planet) < min_planet_distance) return false 
+  end
+  return true
+end
+
+function generate_planet_name()
+  return 'poop'
+end
+
+function connect_planet(planet)
+  -- recursively connect all planets with the origin planet
+  --
+  -- just keep connecting planets with their neighbors until
+  -- you reach a planet that is already connected
+  -- note that the origin planet starts out 'connected'
+  if (planet.connected) return true
+  local closest_neighbor
+  local closest_dist = 1000
+  for neighbor in all(planets) do
+   local dist = v_distance(neighbor, planet)
+    -- dont connect planet with itself, or any neighbor connected to
+   if dist ~= 0
+   and indexOf(planet.neighbors, neighbor) == -1
+   and (planet.orbit - neighbor.orbit < 2) then
+     if dist < closest_dist then
+       closest_dist = dist
+       closest_neighbor = neighbor
+     end
+   end
+  end
+
+ add(planet.neighbors, closest_neighbor) 
+ add(closest_neighbor.neighbors, planet) 
+ 
+ planet.connected = connect_planet(closest_neighbor)
+end
+
 -- HELM STUFF
 
 --[[ helm globals
@@ -53,7 +155,6 @@ radar_radius = 25
 function init_helm()
   heavenly_bodies = {}
   sparkles = {}
-  stars = {}
   player_ship = spaceship.new({sprite = 0, size = 2})
   gate = heavenly_body.new({
     sprite = 4,
@@ -75,14 +176,25 @@ function update_helm()
   player_ship.steering_right = btn(1)
   player_ship.accelerator = btn(2)
 
+  local should_draw_map = btn(4)
+  local map_drawn = indexOf(draw_funcs, draw_map) > -1
+
+  if should_draw_map and not map_drawn then
+    init_map()
+    add(draw_funcs, draw_map)
+    del(draw_funcs, draw_helm)
+  elseif map_drawn and not should_draw_map then
+    del(draw_funcs, draw_map)
+    add(draw_funcs, draw_helm)
+  end
+
   player_ship:update()
   foreach(sparkles, update_sparkle)
 end
 
 function draw_helm()
-  cls()
   foreach(stars, draw_star)
-  draw_planet()
+  helm_draw_planet()
   foreach(sparkles, draw_sparkle)
   player_ship:draw()
   for hb in all(heavenly_bodies) do
@@ -193,25 +305,12 @@ end
 
 -- planet stuff
 
-function draw_planet()
+function helm_draw_planet()
   local planet_diameter = 50
   circfill(0, 0, planet_diameter, 12) 
 end
 
 -- star stuff
-
-function create_stars()
-  local counter = 0
-  for y=0,127 do
-  for x=0,127 do
-    counter += 1
-    if counter % 7 == 0 and rnd() > 0.9 then
-      local clr = rnd() > 0.5 and 6 or select({1,6,7,12})
-      add(stars, {x=x, y=y, clr=clr})
-    end
-  end
-  end
-end
 
 function draw_star(star)
   local cam_x, cam_y = cam:get()
@@ -248,6 +347,102 @@ end
 
 
 
+-- MAP STUFF
+
+selected = nil
+current = nil
+
+function init_map()
+  -- this would normally go in the map screens init
+  for planet in all(planets) do
+    if planet.current then
+      selected = planet
+      current = planet
+      break
+    end
+  end
+end
+
+function move_selection(dir)
+  -- move the selection around the map. seems huge.
+  -- find the nearest planet in the correct direction
+  -- among the list of the current planets neighbors
+  -- (including the current planet)
+  local candidate_selection
+  local candidate_dist = 1000
+  local axis = (dir == 0 or dir == 1) and 'x' or 'y'
+  local selectable = copy_table(current.neighbors)
+  add(selectable, current)
+  for planet in all(selectable) do
+    local candidate = false
+    if (dir == 0 or dir == 2) then
+      candidate = (planet[axis] < selected[axis])
+    else
+      candidate = (planet[axis] > selected[axis])
+    end
+
+    local dist = v_distance(selected, planet)
+    if candidate and (dist <= candidate_dist) then
+      candidate_dist = dist
+      candidate_selection = planet
+    end
+  end
+  if (candidate_selection) selected = candidate_selection
+end
+
+function update_map()
+  -- left
+  if btnp(0) then
+   move_selection(0)
+  end
+
+  -- right
+  if btnp(1) then
+   move_selection(1)
+  end
+
+  -- up
+  if btnp(2) then
+   move_selection(2)
+  end
+
+  -- down
+  if btnp(3) then
+   move_selection(3)
+  end
+end
+
+function draw_map()
+  cam:set(0,0)
+  -- draw orbits
+  --for orbit in all(orbits) do
+  --  circ(center, center, orbit, 5)
+  --end
+
+  -- draw planet connections
+  foreach(planets, draw_planet_connections)
+
+  -- draw selection box
+  rectfill(selected.x - 3, selected.y - 3, selected.x + 3, selected.y + 3, 11) 
+
+  -- draw planets
+  foreach(planets, map_draw_planet)
+end
+
+function map_draw_planet(planet)
+  -- draw a circle at the planets coords
+  local color = planet.current and 12 or 13 
+  circfill(planet.x, planet.y, 3, color)
+  circfill(planet.x, planet.y, 2, 0)
+end
+
+function draw_planet_connections(planet)
+  -- draw a line from the planet to its neighbors
+  for neighbor in all(planet.neighbors) do
+    line(planet.x, planet.y, neighbor.x, neighbor.y, 6)
+  end
+end
+
 -- HELPERS
 
 function spritesheet_coords(sprite_num)
@@ -264,10 +459,40 @@ function select(t)
   return t[flr(rnd(#t))+1]
 end
 
+function indexOf(t, object)
+  for i=1,#t do
+    if object == t[i] then
+      return i
+    end
+  end
+  return -1
+end
+
+function copy_table(orig)
+  local copy = {}
+  for orig_key, orig_value in pairs(orig) do
+    copy[orig_key] = orig_value
+  end
+  return copy
+end
+
+function boolstr(bool)
+  return bool and 'true' or 'false'
+end
+
+
 -- mathy_stuff
 function point_on_circle(x, y, angle, radius)
   -- find the point on the circle at (x,y) of given radius
   return cos(angle) * radius + x, sin(angle) * radius + y
+end
+
+function v_distance(t1, t2)
+  return sqrt(sqr(t1.x - t2.x) + sqr(t1.y - t2.y))
+end
+
+function sqr(x)
+  return x * x
 end
 
 
