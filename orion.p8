@@ -49,7 +49,7 @@ planets = {}
 center = 64
 orbits = {0, 15, 35, 55}
 min_planet_distance = 7
-origin = nil
+current_planet = nil
 
 function create_stars()
   local counter = 0
@@ -70,13 +70,14 @@ function create_planets()
     local num_planets = o == 1 and 1 or rnd(o) + extra_planets
     for p=1,num_planets do create_planet(orbits[o], o) end
   end
-  origin = planets[1]
+  local origin = planets[1]
 
   -- createConnections
   origin.connected = true
   foreach(planets, connect_planet)
 
   origin.current = true
+  current_planet = origin
 end
 
 function create_planet(radius, orbit)
@@ -156,15 +157,21 @@ function init_helm()
   heavenly_bodies = {}
   sparkles = {}
   player_ship = spaceship.new({sprite = 0, size = 2})
-  gate = heavenly_body.new({
-    sprite = 4,
-    size = 4,
-    angle = 0.75,
-    radar_clr = 13,
-    x = 100,
-    y = 100
-  })
-  add(heavenly_bodies, gate)
+
+  for neighbor in all(current_planet.neighbors) do
+    local angle = atan2(neighbor.x - current_planet.x, neighbor.y - current_planet.y)
+    local x, y = point_on_circle(0, 0, angle, 500)
+    local gate = heavenly_body.new({
+      sprite = 4,
+      size = 4,
+      angle = angle,
+      radar_clr = 10,
+      x = x,
+      y = y
+    })
+    add(heavenly_bodies, gate)
+  end
+
   add(update_funcs, update_helm)
   add(draw_funcs, draw_helm)
 end
@@ -335,7 +342,7 @@ end
 
 function draw_radar()
   -- the planet is always 0,0
-  draw_radar_blip({x=0, y=0, radar_clr=10})
+  draw_radar_blip({x=0, y=0, radar_clr=11})
   foreach(heavenly_bodies, draw_radar_blip)
 end
 
