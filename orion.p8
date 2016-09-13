@@ -164,7 +164,7 @@ function init_helm()
     local gate = heavenly_body.new({
       sprite = 4,
       size = 4,
-      angle = angle,
+      angle = angle - 0.25,
       radar_clr = 10,
       x = x,
       y = y
@@ -222,6 +222,8 @@ function heavenly_body.new(settings)
 end
 
 function heavenly_body:draw()
+  -- this is slow if there are 3 gates on the screen :(
+  -- maybe cache this for the gates somehow?
   local r=flr(self.angle*20)/20
   local s=sin(r)
   local c=cos(r)
