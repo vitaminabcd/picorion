@@ -106,7 +106,7 @@ end
 function validate_planet(x, y)
   -- make sure this planet wont be too close to any others
   for planet in all(planets) do
-    if(v_distance({x=x, y=y}, planet) < min_planet_distance) return false 
+    if(distance({x=x, y=y}, planet) < min_planet_distance) return false 
   end
   return true
 end
@@ -125,7 +125,7 @@ function connect_planet(planet)
   local closest_neighbor
   local closest_dist = 1000
   for neighbor in all(planets) do
-   local dist = v_distance(neighbor, planet)
+   local dist = distance(neighbor, planet)
     -- dont connect planet with itself, or any neighbor connected to
    if dist ~= 0
    and indexOf(planet.neighbors, neighbor) == -1
@@ -222,8 +222,10 @@ function heavenly_body.new(settings)
 end
 
 function heavenly_body:draw()
-  -- this is slow if there are 3 gates on the screen :(
-  -- maybe cache this for the gates somehow?
+  if distance(self, player_ship) > 128 then
+    return
+  end
+
   local r=flr(self.angle*20)/20
   local s=sin(r)
   local c=cos(r)
@@ -390,7 +392,7 @@ function move_selection(dir)
       candidate = (planet[axis] > selected[axis])
     end
 
-    local dist = v_distance(selected, planet)
+    local dist = distance(selected, planet)
     if candidate and (dist <= candidate_dist) then
       candidate_dist = dist
       candidate_selection = planet
@@ -496,7 +498,7 @@ function point_on_circle(x, y, angle, radius)
   return cos(angle) * radius + x, sin(angle) * radius + y
 end
 
-function v_distance(t1, t2)
+function distance(t1, t2)
   return sqrt(sqr(t1.x - t2.x) + sqr(t1.y - t2.y))
 end
 
