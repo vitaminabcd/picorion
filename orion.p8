@@ -222,8 +222,8 @@ function heavenly_body.new(settings)
 end
 
 function heavenly_body:draw()
-  if distance(self, player_ship) > 128 then
-    return
+  if crap_distance(self, player_ship) >= 96 then
+    return nil
   end
 
   local r=flr(self.angle*20)/20
@@ -500,6 +500,11 @@ end
 
 function distance(t1, t2)
   return sqrt(sqr(t1.x - t2.x) + sqr(t1.y - t2.y))
+end
+
+function crap_distance(t1, t2)
+  -- pico8 has small numbers, so sometimes squaring things is too much
+  return abs(t1.x - t2.x) + abs(t1.y - t2.y)
 end
 
 function sqr(x)
