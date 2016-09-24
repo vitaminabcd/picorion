@@ -41,6 +41,8 @@ peep = {}
 empty_chat_text = {''}
 current_chat_text = empty_chat_text
 current_chat_index = 1
+chat_anim_loops = 0
+continue_animation = nil
 
 function _init()
   peep = create_person()
@@ -83,6 +85,12 @@ function advance_frame()
   peep.current_frame += 1
   if peep.current_frame > #peep.current_animation then
     peep.current_frame = 1
+    chat_anim_loops += 1
+    if chat_anim_loops > 5 then
+      chat_anim_loops = 0
+      continue_animation = peep.current_animation
+      switch_animation('idle')
+    end
   end
 end
 
@@ -93,40 +101,49 @@ function update_chat_options()
     if current_chat_index < #current_chat_text then
       chat_options = more_option
     else
-      chat_options = done_option
+      done_chat()
     end
   end
 end
 
 function joke_result()
   switch_animation('laughing')
-  current_chat_text = {'hahaha!'}
+  switch_chat({'hahaha!'})
 end
 
 function talk_result()
   switch_animation('talking')
-  current_chat_text = {'hello my name is buttfart.', 'how are you today?'}
+  switch_chat({'hello my name is buttfart.', 'how are you today?'})
 end
 
 function idle_result()
   switch_animation('idle')
-  current_chat_text = {''}
+  switch_chat({''})
 end
 
 function switch_animation(animation)
-  peep.current_animation = peep.animations[animation]
+  local is_string = (type(animation) == 'string')
+  peep.current_animation = is_string and peep.animations[animation] or animation
   peep.current_frame = 1
 end
 
+function switch_chat(txt)
+  current_chat_text = txt
+  current_chat_index = 1
+end
+
 function more_chat()
+  chat_anim_loops = 0
   current_chat_index += 1
+  if continue_animation then
+    peep.current_animation = continue_animation
+    peep.current_frame = 1
+  end
 end
 
 function done_chat()
-  current_chat_text = empty_chat_text
-  current_chat_index = 1
   chat_options = default_options
-  switch_animation('idle')
+  --switch_animation('idle')
 end
 
 default_options = {
